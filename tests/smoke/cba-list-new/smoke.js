@@ -36,6 +36,7 @@ for (let i = 4; i < 20; i++) {
     text: `List${i}`
   });
 }
+console.log("string");
 cbaList.items = items;
 
 const cbaSortableList = document.querySelector("#sortable");
@@ -73,6 +74,7 @@ document.querySelector("#add-item").addEventListener("click", () =>
     text: `List${count}`
   });
 });
+// add item
 
 document.querySelector("#rename").addEventListener("click", () =>
 {
@@ -85,15 +87,26 @@ document.querySelector("#save").addEventListener("click", () =>
   cbaList.saveEditables();
 });
 
-document.querySelector("#add-subitem").addEventListener("click", () =>
+cbaList.addEventListener("addSubitem", ({detail}) =>
 {
   count++;
   const {id} = cbaList.getSelectedItem();
   cbaList.addRow({
     data: `Info${count}`,
     text: `List${count}`
-  }, id);
+  }, detail.id);
 });
+cbaList.addEventListener("addItem", (e) =>
+{
+  console.log("smoke");
+  count++;
+  cbaList.addRow({
+    data: `Info${count}`,
+    text: `List${count}`
+  });
+});
+
+
 
 cbaList.addEventListener("select", () =>
 {

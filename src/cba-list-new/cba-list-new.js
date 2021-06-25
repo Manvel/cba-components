@@ -22,9 +22,8 @@ class List extends HTMLElement
     this.attachShadow({mode: "open"});
     this.shadowRoot.innerHTML = `
     <div id="container">
-      <h2></h2>
-      <h3 id="column"><a href="#"></a></h3>
-      <div id="list-body">
+      <p id="group"></p>
+      <div id="list-body">       
         <ul></ul>
       </div>
       <div id="tooltip"></div>
@@ -32,6 +31,14 @@ class List extends HTMLElement
     `;
     constructableCSS.load(this.shadowRoot);
   }
+
+  // add-item
+
+  // _addItemsHandler({target})
+  // {
+  //   this.dispatchEvent(new CustomEvent("addItem"))
+  // }
+
 
   /**
    * Populate and render items ensuring the ids and sorting
@@ -118,15 +125,34 @@ class List extends HTMLElement
     this.tooltipLinkText = this.getAttribute("tooltip-link-text");
     this.tooltipLinkTextDefault = "Learn more";
     this.connected = true;
+    this.group = this.shadowRoot.querySelector("#group");
 
     this.container.addEventListener("click", ({target}) =>
     {
-      if (target.tagName === "BUTTON")
+      switch (target.dataset.action)
       {
-        const item = this.getItem(target.parentElement.dataset.id);
-        this.setExpansion(item.id, !item.expanded);
-        return;
+        case "toggleExpantion":
+          {
+            const item = this.getItem(target.parentElement.dataset.id);
+            this.setExpansion(item.id, !item.expanded);
+            return;
+          }
+        case "addItem":
+          {
+            this.dispatchEvent(new CustomEvent("addItem"))
+          }
+        case "addSubitem":
+          {
+            const {id} = target.closest("[data-id]").dataset;
+            this.dispatchEvent(new CustomEvent("addSubitem", {detail: {id}}))
+          }
       }
+      // if (target.classList.contains("collapsed") || target.classList.contains("expanded"))
+      // {
+      //   const item = this.getItem(target.parentElement.dataset.id);
+      //   this.setExpansion(item.id, !item.expanded);
+      //   return;
+      // }
       const row = target.closest(".row");
       if (row)
       {
@@ -189,8 +215,15 @@ class List extends HTMLElement
           this.setAttribute("sort", "asc");
       });
     }
+    this._renderGroup();
     this._renderHeading();
     this._render();
+  }
+
+  _renderGroup()
+  {
+    const result = html`<span>group</span><button class="add-item" data-action="addItem"></button>`;
+    render(result, this.group);
   }
 
   _sortItems()
@@ -557,29 +590,91 @@ class List extends HTMLElement
     this.tooltip.classList.remove("visible")
   }
 
+  // _addSubitemsHandler({target})
+  // {
+  //   const {id} = target.closest("[data-id]").dataset;
+  //   this.dispatchEvent(new CustomEvent("addSubitem", {detail: {id}}))
+  // }
+
   /**
    * Render method to be called after each state change
    */
   _render()
+  // {
+  //   this.container.dataset.subitems = this.hasSubtiems;
+  //   const createRow = (item) =>
+  //   {
+  //     const {text, selected, editable = false} = item;
+  //     const classes = ["row"];
+  //     if (selected)
+  //       classes.push("highlight");
+  //     const addSubitemsButton = html`
+  //     <div class="control">
+  //       <button class="subitem-btn" data-action="addSubitem"></button>
+  //       <button class="kebab-btn" ></button>
+  //     </div>
+  //     `;
+  //     const row = html`<div class="${classes.join(" ")}" tabindex="${selected ? 0 : -1}" draggable="${this.drag}" contenteditable="${editable}" title="${text}"><span>${text}</span>${addSubitemsButton}</div>`;
+  //     const infoText = this._getText(item, this.tooltipText);
+  //     if (infoText)
+  //     {
+  //       const tooltip = html`<span class="${infoText ? "hasInfo" : ""}" @mouseenter="${this.showTooltip.bind(this)}" @mouseleave="${this.hideTooltip.bind(this)}"></span>`;
+  //       return html`${tooltip}${row}`;
+  //     }
+  //     else
+  //     {
+  //       return row;
+  //     }
+  //   }
+  //   const createList = (item) =>
+  //   {
+  //     const {id} = item;
+  //     return html`<li data-id="${id}">
+  //                     ${createRow(item)}
+  //                 </li>`;
+  //   }
+  //   const result = this._data.map((row) =>
+  //   {
+  //     const {id, subItems, expanded} = row;
+  //     if (subItems)
+  //     {
+  //       let subitems = "";
+  //       if (expanded)
+  //         subitems = html`<ul>${row.subItems.map(createList)}</ul>`;
+  //       return html`<li data-id="${id}">
+  //                       <button tabindex="-1" class="${expanded ? "expanded" : "collapsed"}" data-action="toggleExpantion"></button>${createRow(row)}
+  //                       ${subitems}
+  //                   </li>`;
+  //     }
+  //     else
+  //     {
+  //       return createList(row);
+  //     }
+  //   });
+  //   render(result, this.container);
+  // }
   {
     this.container.dataset.subitems = this.hasSubtiems;
-    const createRow = (item) =>
+    const createRow = (item, hasSubItems, expanded) =>
     {
       const {text, selected, editable = false} = item;
       const classes = ["row"];
       if (selected)
         classes.push("highlight");
-      const row = html`<span class="${classes.join(" ")}" tabindex="${selected ? 0 : -1}" draggable="${this.drag}" contenteditable="${editable}" title="${text}">${text}</span>`;
-      const infoText = this._getText(item, this.tooltipText);
-      if (infoText)
+      const addSubitemsButton = html`
+      <div class="control">
+        <button class="subitem-btn" data-action="addSubitem"></button>
+        <button class="kebab-btn" ></button>
+      </div>
+      `;
+      const textAndControls = html`<span>${text}</span>${addSubitemsButton}`;
+      let expansionButton = "";
+      if (hasSubItems)
       {
-        const tooltip = html`<span class="${infoText ? "hasInfo" : ""}" @mouseenter="${this.showTooltip.bind(this)}" @mouseleave="${this.hideTooltip.bind(this)}"></span>`;
-        return html`${tooltip}${row}`;
+        expansionButton = html`<button tabindex="-1" class="${expanded ? "expanded" : "collapsed"}" data-action="toggleExpantion"></button>`;
       }
-      else
-      {
-        return row;
-      }
+      const row = html`<div class="${classes.join(" ")}" tabindex="${selected ? 0 : -1}" draggable="${this.drag}" contenteditable="${editable}" title="${text}">${hasSubItems ? expansionButton : ""}${textAndControls}</div>`;
+      return row;
     }
     const createList = (item) =>
     {
@@ -595,16 +690,17 @@ class List extends HTMLElement
       {
         let subitems = "";
         if (expanded)
+        {
           subitems = html`<ul>${row.subItems.map(createList)}</ul>`;
         return html`<li data-id="${id}">
-                        <button tabindex="-1" class="${expanded ? "expanded" : "collapsed"}"></button>${createRow(row)}
+                        ${createRow(row, true, expanded)}
                         ${subitems}
                     </li>`;
-      }
-      else
-      {
-        return createList(row);
-      }
+        }
+        else
+        {
+          return createList(row);
+        }
     });
     render(result, this.container);
   }
